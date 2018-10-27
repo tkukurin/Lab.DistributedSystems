@@ -21,7 +21,8 @@
 	<modules>
 		<module>connector</module>
 		<module>service</module>
-	</modules>
+    <module>client</module>
+  </modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
