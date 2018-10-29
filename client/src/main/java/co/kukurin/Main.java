@@ -63,7 +63,6 @@ public class Main {
   static class Program {
 
     public void run() throws IOException {
-      Map<String, Sensor> nameToSensor = new HashMap<>();
       ExecutorService clientService = Executors.newCachedThreadPool();
       ExecutorService serverService = Executors.newCachedThreadPool();
       ExecutorService httpClients = Executors.newCachedThreadPool();
@@ -84,6 +83,14 @@ public class Main {
           .build()
           .create(SensorService.class);
       int port = 8181;
+
+      Map<String, Sensor> nameToSensor = new HashMap<>();
+      Sensor s1 = new Sensor("u1", 8081, service, httpClients, measurements);
+      serverService.execute(s1.getServer());
+      nameToSensor.put("u1", s1);
+      Sensor s2 = new Sensor("u1", 8082, service, httpClients, measurements);
+      nameToSensor.put("u2", s2);
+      serverService.execute(s2.getServer());
 
       while (true) {
         out.print("> ");

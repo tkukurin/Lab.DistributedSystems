@@ -23,9 +23,9 @@ public class Application implements CommandLineRunner {
 
   @Override
   public void run(String... args) {
-//    sensorRepository.save(new Sensor(
-//        "user1", new Location(1.0, 1.0), new IpAddress("192.168.0.1", 8080)));
-//    sensorRepository.save(new Sensor(
-//        "user2", new Location(12.0, 12.0), new IpAddress("192.168.0.1", 8080)));
+    sensorRepository.save(new Sensor(
+        "u1", new Location(1.0, 1.0), new IpAddress("192.168.5.187", 8081)));
+    sensorRepository.save(new Sensor(
+        "u2", new Location(12.0, 12.0), new IpAddress("192.168.5.187", 8082)));
   }
 }

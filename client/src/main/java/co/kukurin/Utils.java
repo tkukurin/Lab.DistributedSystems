@@ -12,4 +12,11 @@ public class Utils {
   public static long currentTimeSeconds() {
     return System.currentTimeMillis() / 1000;
   }
+
+  public static void sleepBestEffort(int i) {
+    try {
+      Thread.sleep(i);
+    } catch (InterruptedException ignore) {
+    }
+  }
 }

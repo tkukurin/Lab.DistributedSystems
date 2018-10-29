@@ -17,12 +17,31 @@ class Measurements {
   @AllArgsConstructor
   @Getter
   static class Measurement {
-    Double temperature;
-    Double pressure;
-    Double humidity;
-    Double co;
-    Double no2;
-    Double so2;
+    String temperature;
+    String pressure;
+    String humidity;
+    String co;
+    String no2;
+    String so2;
+
+    @Override
+    public String toString() {
+      return String.format("%s,%s,%s,%s,%s,%s", temperature, pressure, humidity, co, no2, so2);
+    }
+
+    public static Measurement parse(String line) {
+//      List<Optional<Double>> components = Arrays.stream(line.trim().split(","))
+//          .map(Measurements::doubleOrEmpty)
+//          .collect(Collectors.toList());
+      List<String> components = Arrays.stream(line.trim().split(",")).collect(Collectors.toList());
+      return new Measurement(
+          guard(components, 0),
+          guard(components, 1),
+          guard(components, 2),
+          guard(components, 3),
+          guard(components, 4),
+          guard(components, 5));
+    }
 
     public static Measurement average(Measurement m1, Measurement m2) {
       return new Measurement(
@@ -34,14 +53,16 @@ class Measurements {
           averageOrSingle(m1.getSo2(), m2.getSo2()));
     }
 
-    private static double averageOrSingle(Double d1, Double d2) {
-      if (d1 == null) {
-        return d2;
+    private static String averageOrSingle(String s1, String s2) {
+      if (s1 == null || s1.isEmpty()) {
+        return s2;
       }
-      if (d2 == null) {
-        return d1;
+      if (s2 == null || s2.isEmpty()) {
+        return s1;
       }
-      return (d1 + d2) / 2.0;
+      double d1 = Double.parseDouble(s1);
+      double d2 = Double.parseDouble(s2);
+      return Double.toString((d1 + d2) / 2.0);
     }
   }
 
@@ -67,16 +88,7 @@ class Measurements {
           break;
         }
 
-        List<Optional<Double>> components = Arrays.stream(line.trim().split(","))
-            .map(Measurements::doubleOrEmpty)
-            .collect(Collectors.toList());
-        result.measurements.add(new Measurement(
-            guard(components, 0),
-            guard(components, 1),
-            guard(components, 2),
-            guard(components, 3),
-            guard(components, 4),
-            guard(components, 5)));
+        result.measurements.add(Measurement.parse(line));
       }
     } catch (IOException e) {
       e.printStackTrace();
@@ -85,11 +97,11 @@ class Measurements {
     return result;
   }
 
-  private static Double guard(List<Optional<Double>> components, int i) {
+  private static String guard(List<String> components, int i) {
     if (components.size() <= i) {
-      return null;
+      return "";
     }
-    return components.get(i).orElse(null);
+    return components.get(i);
   }
 
   private static Optional<Double> doubleOrEmpty(String s) {

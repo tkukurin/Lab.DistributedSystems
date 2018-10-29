@@ -48,6 +48,7 @@ public class MainController {
   @PostMapping(path="/store")
   public boolean storeMeasurement(
     @Valid @NotNull @RequestBody StoreMeasurementRequest storeMeasurementRequest) {
+    log.info(String.format("Storing measurement %s", storeMeasurementRequest));
     return true;
   }
 

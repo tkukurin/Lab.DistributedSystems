@@ -15,6 +15,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 
@@ -46,6 +47,7 @@ public class Sensor {
 
   void shutdown() {
     this.server.running.set(false);
+    this.client.measuring.set(false);
   }
 
   String getIp() {
@@ -54,7 +56,7 @@ public class Sensor {
 
   class Server implements Runnable {
 
-    private ExecutorService executorService; // = Executors.newCachedThreadPool();
+    private ExecutorService executorService;
     private ServerSocket serverSocket;
     private AtomicBoolean running;
 
@@ -66,22 +68,18 @@ public class Sensor {
 
     @Override
     public void run() {
-      this.running.set(true);
       log.debug("Starting server");
+
+      this.running.set(true);
       while (this.running.get()) {
         try  {
           Socket client = this.serverSocket.accept();
           log.debug("Accepted request");
 
-          Measurement measurement = measurements.getReading(Utils.currentTimeSeconds() - startTime);
-          this.executorService.execute(() -> {
-            try (PrintWriter writer = new PrintWriter(client.getOutputStream())) {
-              writer.println("Test");
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
-          });
-              //new Worker(measurement, client.getOutputStream()));
+          Supplier<Measurement> measurement =
+              () -> measurements.getReading(Utils.currentTimeSeconds() - startTime);
+          this.executorService.execute(new Worker(
+            measurement, client.getOutputStream(), client.getInputStream()));
         } catch (IOException e) {
           log.error("Server exception", e);
         }
@@ -112,15 +110,11 @@ public class Sensor {
             Measurement myMeasurement = measurements.getReading(
                 Utils.currentTimeSeconds() - startTime);
             Measurement neighborMeasurement = getMeasurement(socket);
-//        Measurement average = Measurement.average(myMeasurement, neighborMeasurement);
+            Measurement average = Measurement.average(myMeasurement, neighborMeasurement);
             // TODO
             log.info("Sending store request");
             this.sensorService.store(new StoreMeasurementRequest(this.name, "co2", 1.0)).execute();
-            try {
-              Thread.sleep(2000);
-            } catch (InterruptedException e) {
-              log.error("Thread interrupted");
-            }
+            Utils.sleepBestEffort(2000);
           }
         }
       } catch (IOException e) {
@@ -129,21 +123,16 @@ public class Sensor {
     }
 
     private Measurement getMeasurement(Socket socket) throws IOException {
-      try {
-        PrintWriter outToServer = new PrintWriter(new OutputStreamWriter(
-            socket.getOutputStream()), true);
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
-            socket.getInputStream()));
+      PrintWriter outToServer = new PrintWriter(new OutputStreamWriter(
+          socket.getOutputStream()), true);
+      BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
+          socket.getInputStream()));
 
-        //outToServer.println("REQ");
+      outToServer.println("REQ");
+      String received = inFromServer.readLine();
+      log.debug(String.format("Received %s from server", received));
 
-        String received = inFromServer.readLine();
-        System.out.println(received);
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-
-      return new Measurement(1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+      return Measurement.parse(received);
     }
   }
 }
