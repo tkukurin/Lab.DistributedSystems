@@ -30,4 +30,12 @@ public class SensorService {
         .min(Comparator.comparingDouble(si -> si.getLocation().distance(location)));
     return closest.orElse(null);
   }
+
+  public boolean store(StoreMeasurementRequest storeMeasurementRequest) {
+    Sensor sensor = this.sensorRepository.findOneByUsername(storeMeasurementRequest.getUsername());
+    sensor.addMeasurement(
+        storeMeasurementRequest.getParameter(),
+        storeMeasurementRequest.getAverageValue());
+    return true;
+  }
 }

@@ -63,6 +63,7 @@ public class Sensor {
     public Server(int port, ExecutorService executorService) throws IOException {
       this.executorService = executorService;
       this.serverSocket = new ServerSocket(port);
+      this.serverSocket.setSoTimeout(100000);
       this.running = new AtomicBoolean(false);
     }
 
@@ -110,12 +111,23 @@ public class Sensor {
             Measurement myMeasurement = measurements.getReading(
                 Utils.currentTimeSeconds() - startTime);
             Measurement neighborMeasurement = getMeasurement(socket);
-            Measurement average = Measurement.average(myMeasurement, neighborMeasurement);
-            // TODO
-            log.info("Sending store request");
-            this.sensorService.store(new StoreMeasurementRequest(this.name, "co2", 1.0)).execute();
+            Measurement.average(myMeasurement, neighborMeasurement)
+                .streamAsKeyValue()
+                .filter(m -> m.getValue() != null)
+                .forEach(measure -> {
+                  try {
+                    this.sensorService.store(
+                        new StoreMeasurementRequest(
+                            this.name, measure.getKey(), measure.getValue())).execute();
+                  } catch (IOException e) {
+                    log.error("Error sending measurement", e);
+                  }
+                });
+
             Utils.sleepBestEffort(2000);
           }
+
+          socket.getOutputStream().write(42);
         }
       } catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -128,7 +140,7 @@ public class Sensor {
       BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
           socket.getInputStream()));
 
-      outToServer.println("REQ");
+      outToServer.println("ping");
       String received = inFromServer.readLine();
       log.debug(String.format("Received %s from server", received));
 

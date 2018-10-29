@@ -2,11 +2,19 @@ package co.kukurin.sensor.entity;
 
 import co.kukurin.data.IpAddress;
 import co.kukurin.data.Location;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.jdo.annotations.Element;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Null;
 import lombok.Getter;
@@ -34,13 +42,17 @@ public class Sensor {
   @Embedded
   private IpAddress ipAddress;
 
-  // TODO
-//  @OneToMany(cascade = CascadeType.ALL)
-//  private List<Double> measurements;
+  @ElementCollection
+  private Map<String, Double> measurements;
 
   public Sensor(String username, Location location, IpAddress ipAddress) {
     this.username = username;
     this.location = location;
     this.ipAddress = ipAddress;
+    this.measurements = new HashMap<>();
+  }
+
+  public void addMeasurement(String parameter, double averageValue) {
+    this.measurements.put(parameter, averageValue);
   }
 }

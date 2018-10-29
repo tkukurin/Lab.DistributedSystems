@@ -49,6 +49,7 @@ public class MainController {
   public boolean storeMeasurement(
     @Valid @NotNull @RequestBody StoreMeasurementRequest storeMeasurementRequest) {
     log.info(String.format("Storing measurement %s", storeMeasurementRequest));
+    sensorService.store(storeMeasurementRequest);
     return true;
   }
 

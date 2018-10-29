@@ -6,9 +6,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -30,9 +32,6 @@ class Measurements {
     }
 
     public static Measurement parse(String line) {
-//      List<Optional<Double>> components = Arrays.stream(line.trim().split(","))
-//          .map(Measurements::doubleOrEmpty)
-//          .collect(Collectors.toList());
       List<String> components = Arrays.stream(line.trim().split(",")).collect(Collectors.toList());
       return new Measurement(
           guard(components, 0),
@@ -63,6 +62,17 @@ class Measurements {
       double d1 = Double.parseDouble(s1);
       double d2 = Double.parseDouble(s2);
       return Double.toString((d1 + d2) / 2.0);
+    }
+
+    public Stream<HashMap.SimpleEntry<String, Double>> streamAsKeyValue() {
+      return Stream.<HashMap.SimpleEntry<String, Double>>builder()
+          .add(new HashMap.SimpleEntry<>("temperature", doubleOrEmpty(this.getTemperature())))
+          .add(new HashMap.SimpleEntry<>("pressure", doubleOrEmpty(this.getPressure())))
+          .add(new HashMap.SimpleEntry<>("humidity", doubleOrEmpty(this.getHumidity())))
+          .add(new HashMap.SimpleEntry<>("co", doubleOrEmpty(this.getCo())))
+          .add(new HashMap.SimpleEntry<>("no2", doubleOrEmpty(this.getNo2())))
+          .add(new HashMap.SimpleEntry<>("so2", doubleOrEmpty(this.getSo2())))
+          .build();
     }
   }
 
@@ -104,11 +114,11 @@ class Measurements {
     return components.get(i);
   }
 
-  private static Optional<Double> doubleOrEmpty(String s) {
+  private static Double doubleOrEmpty(String s) {
     try {
-      return Optional.of(Double.parseDouble(s));
+      return Double.parseDouble(s);
     } catch (Exception e) {
-      return Optional.empty();
+      return null;
     }
   }
 }

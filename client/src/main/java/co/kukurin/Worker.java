@@ -20,17 +20,10 @@ public class Worker implements Runnable {
   @Override
   public void run() {
     try (PrintWriter writer = new PrintWriter(this.outputStream, true);
-          BufferedReader reader = new BufferedReader(new InputStreamReader(this.inputStream))) {
-      String request = reader.readLine();
-      writer.println(measurementSupplier.get().toString());
-//      writer.print(measurementSupplier.get());
-//      String input;
-//      while ((input = reader.readLine()) != null) {
-//        if (!input.equals("ping")) {
-//          break;
-//        }
-//        writer.println(measurementSupplier.get());
-//      }
+          InputStreamReader reader = new InputStreamReader(this.inputStream)) {
+      while (reader.read() != 42) {
+        writer.println(measurementSupplier.get().toString());
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
