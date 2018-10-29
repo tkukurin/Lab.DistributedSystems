@@ -1,6 +1,5 @@
 package co.kukurin;
 
-import co.kukurin.Main.SensorService;
 import co.kukurin.Measurements.Measurement;
 import co.kukurin.data.IpAddress;
 import co.kukurin.sensor.StoreMeasurementRequest;
@@ -10,7 +9,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -21,21 +19,19 @@ import org.apache.log4j.Logger;
 
 public class Sensor {
 
-  @Getter
-  private final Client client;
-  @Getter
-  private final Server server;
-  @Getter
-  private final int port;
-
   private final long startTime;
   private final Logger log;
   private final Measurements measurements;
 
-  Sensor(
-      String name, int port, SensorService sensorService,
-      ExecutorService executorService, Measurements measurements)
-      throws IOException {
+  @Getter private final Client client;
+  @Getter private final Server server;
+  @Getter private final int port;
+
+  Sensor(String name,
+      int port,
+      SensorService sensorService,
+      ExecutorService executorService,
+      Measurements measurements) throws IOException {
     this.client = new Client(name, sensorService);
     this.server = new Server(port, executorService);
 
@@ -77,10 +73,10 @@ public class Sensor {
           Socket client = this.serverSocket.accept();
           log.debug("Accepted request");
 
-          Supplier<Measurement> measurement =
+          Supplier<Measurement> measurementSupplier =
               () -> measurements.getReading(Utils.currentTimeSeconds() - startTime);
           this.executorService.execute(new Worker(
-            measurement, client.getOutputStream(), client.getInputStream()));
+            measurementSupplier, client.getOutputStream(), client.getInputStream()));
         } catch (IOException e) {
           log.error("Server exception", e);
         }
@@ -105,20 +101,20 @@ public class Sensor {
       this.measuring.set(true);
       try {
         IpAddress neighborIp = this.sensorService.nearest(this.name).execute().body();
-        try (Socket socket =
-            new Socket(InetAddress.getByName(neighborIp.getIp()), neighborIp.getPort())) {
+        try (Socket socket = new Socket(neighborIp.getIp(), neighborIp.getPort())) {
           while (this.measuring.get()) {
             Measurement myMeasurement = measurements.getReading(
                 Utils.currentTimeSeconds() - startTime);
             Measurement neighborMeasurement = getMeasurement(socket);
+
             Measurement.average(myMeasurement, neighborMeasurement)
                 .streamAsKeyValue()
                 .filter(m -> m.getValue() != null)
-                .forEach(measure -> {
+                .forEach(m -> {
                   try {
-                    this.sensorService.store(
-                        new StoreMeasurementRequest(
-                            this.name, measure.getKey(), measure.getValue())).execute();
+                    StoreMeasurementRequest request =
+                        new StoreMeasurementRequest(this.name, m.getKey(), m.getValue());
+                    this.sensorService.store(request).execute();
                   } catch (IOException e) {
                     log.error("Error sending measurement", e);
                   }
@@ -127,7 +123,7 @@ public class Sensor {
             Utils.sleepBestEffort(2000);
           }
 
-          socket.getOutputStream().write(42);
+          socket.getOutputStream().write(Worker.SERVER_SHUTDOWN);
         }
       } catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -137,10 +133,10 @@ public class Sensor {
     private Measurement getMeasurement(Socket socket) throws IOException {
       PrintWriter outToServer = new PrintWriter(new OutputStreamWriter(
           socket.getOutputStream()), true);
+      outToServer.flush();
+
       BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
           socket.getInputStream()));
-
-      outToServer.println("ping");
       String received = inFromServer.readLine();
       log.debug(String.format("Received %s from server", received));
 

@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class Worker implements Runnable {
+  public static final int SERVER_SHUTDOWN = 42;
 
   private Supplier<Measurement> measurementSupplier;
   private OutputStream outputStream;
@@ -21,7 +22,7 @@ public class Worker implements Runnable {
   public void run() {
     try (PrintWriter writer = new PrintWriter(this.outputStream, true);
           InputStreamReader reader = new InputStreamReader(this.inputStream)) {
-      while (reader.read() != 42) {
+      while (reader.read() != SERVER_SHUTDOWN) {
         writer.println(measurementSupplier.get().toString());
       }
     } catch (IOException e) {

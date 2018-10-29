@@ -1,9 +1,7 @@
 package co.kukurin;
 
-import co.kukurin.data.IpAddress;
 import co.kukurin.data.Location;
 import co.kukurin.sensor.SensorRegisterRequest;
-import co.kukurin.sensor.StoreMeasurementRequest;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,16 +14,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
-import org.apache.log4j.Logger;
-import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.converter.scalars.ScalarsConverterFactory;
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.POST;
-import retrofit2.http.Query;
 
 public class Main {
 
@@ -36,33 +27,11 @@ public class Main {
 
   public static void main(String[] args) throws IOException {
     new Program().run();
-//    ExecutorService clientService = Executors.newCachedThreadPool();
-//    ExecutorService serverService = Executors.newCachedThreadPool();
-//    ExecutorService httpClients = Executors.newCachedThreadPool();
-//
-//    clientService.execute(Main::mainProgram);
-//    clientService.execute(Main::mainProgram);
-//    clientService.execute(Main::mainProgram);
-  }
-
-  private static void mainProgram() {
-    Logger log = Logger.getLogger(Thread.currentThread().getName());
-    log.info("Started");
-    while(true) {
-      try {
-        log.info("Sleeping");
-        Thread.sleep(2000);
-      } catch (InterruptedException e) {
-        log.error("Thread interrupt");
-        break;
-      }
-    }
-    log.info("Thread ended");
   }
 
   static class Program {
 
-    public void run() throws IOException {
+    void run() throws IOException {
       ExecutorService clientService = Executors.newCachedThreadPool();
       ExecutorService serverService = Executors.newCachedThreadPool();
       ExecutorService httpClients = Executors.newCachedThreadPool();
@@ -159,19 +128,4 @@ public class Main {
       }
     }
   }
-
-  interface SensorService {
-    @GET("/nearest")
-    Call<IpAddress> nearest(@Query("username") String username);
-
-    @POST("/register")
-    Call<Boolean> register(@Body SensorRegisterRequest request);
-
-    @POST("/store")
-    Call<Boolean> store(@Body StoreMeasurementRequest request);
-
-    @DELETE("/delete")
-    Call<Void> delete();
-  }
-
 }

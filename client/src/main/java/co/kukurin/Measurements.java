@@ -8,13 +8,47 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.log4j.Logger;
 
 class Measurements {
+
+  private static final Logger log = Logger.getLogger(Measurements.class);
+
+  private final List<Measurement> measurements = new ArrayList<>();
+
+  public Measurement getReading(long secs) {
+    log.debug(String.format("Retrieving measurement at second %d", secs));
+    // formula from the document, adjusted to 0-index and skip header.
+    return this.measurements.get((int)(secs % this.measurements.size()));
+  }
+
+  static Measurements fromFile(String resourceLocation) {
+    Measurements result = new Measurements();
+    InputStream stream =
+        Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceLocation);
+
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+      // skip header: "Temperature,Pressure,Humidity,CO,NO2,SO2,"
+      reader.readLine();
+
+      while (true) {
+        String line = reader.readLine();
+        if (line == null) {
+          break;
+        }
+
+        result.measurements.add(Measurement.parse(line));
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    return result;
+  }
 
   @AllArgsConstructor
   @Getter
@@ -74,37 +108,6 @@ class Measurements {
           .add(new HashMap.SimpleEntry<>("so2", doubleOrEmpty(this.getSo2())))
           .build();
     }
-  }
-
-  private List<Measurement> measurements = new ArrayList<>();
-
-  public Measurement getReading(long secs) {
-    // formula from the document, adjusted to 0-index and skip header.
-    return this.measurements.get((int)(secs % 100));
-  }
-
-  static Measurements fromFile(String resourceLocation) {
-    Measurements result = new Measurements();
-    InputStream stream =
-        Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceLocation);
-
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
-      // skip header: "Temperature,Pressure,Humidity,CO,NO2,SO2,"
-      reader.readLine();
-
-      while (true) {
-        String line = reader.readLine();
-        if (line == null) {
-          break;
-        }
-
-        result.measurements.add(Measurement.parse(line));
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-    return result;
   }
 
   private static String guard(List<String> components, int i) {
