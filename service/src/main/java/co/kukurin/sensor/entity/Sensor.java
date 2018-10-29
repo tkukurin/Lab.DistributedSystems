@@ -1,22 +1,19 @@
 package co.kukurin.sensor.entity;
 
-import java.util.List;
-import javax.persistence.CascadeType;
+import co.kukurin.data.IpAddress;
+import co.kukurin.data.Location;
 import javax.persistence.Column;
+import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Null;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 public class Sensor {
 
@@ -25,19 +22,25 @@ public class Sensor {
   @Null
   private Integer id;
 
-  @Column
   @NotNull
-  private String user;
+  @Column(unique = true)
+  private String username;
 
-  @OneToOne(cascade = CascadeType.ALL)
   @NotNull
+  @Embedded
   private Location location;
 
-  @OneToOne(cascade = CascadeType.ALL)
   @NotNull
+  @Embedded
   private IpAddress ipAddress;
 
-  @OneToMany
-  private List<Double> measurements;
+  // TODO
+//  @OneToMany(cascade = CascadeType.ALL)
+//  private List<Double> measurements;
 
+  public Sensor(String username, Location location, IpAddress ipAddress) {
+    this.username = username;
+    this.location = location;
+    this.ipAddress = ipAddress;
+  }
 }

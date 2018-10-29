@@ -13,5 +13,5 @@ public class StoreMeasurementRequest {
 
   private String parameter;
 
-  private float averageValue;
+  private double averageValue;
 }

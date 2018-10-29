@@ -1,7 +1,7 @@
 package co.kukurin.sensor;
 
-import co.kukurin.sensor.entity.IpAddress;
-import co.kukurin.sensor.entity.Location;
+import co.kukurin.data.IpAddress;
+import co.kukurin.data.Location;
 import co.kukurin.sensor.entity.Sensor;
 import java.util.Comparator;
 import java.util.Optional;
@@ -14,16 +14,14 @@ public class SensorService {
 
   private final SensorRepository sensorRepository;
 
-  public boolean register(SensorRegisterRequest sensorRegisterRequest) {
+  public Sensor register(SensorRegisterRequest sensorRegisterRequest) {
     String username = sensorRegisterRequest.getUsername();
-
     Location location = new Location(
-        null, sensorRegisterRequest.getLatitude(), sensorRegisterRequest.getLongitude());
+        sensorRegisterRequest.getLatitude(), sensorRegisterRequest.getLongitude());
     IpAddress ipAddress = new IpAddress(
-        null, sensorRegisterRequest.getIpAddress(), sensorRegisterRequest.getPort());
+        sensorRegisterRequest.getIpAddress(), sensorRegisterRequest.getPort());
 
-    this.sensorRepository.saveAndFlush(new Sensor(null, username, location, ipAddress));
-    return true;
+    return this.sensorRepository.saveAndFlush(new Sensor(username, location, ipAddress));
   }
 
   public Sensor nearest(Location location) {

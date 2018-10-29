@@ -1,5 +1,6 @@
 package co.kukurin.sensor;
 
+import co.kukurin.data.IpAddress;
 import co.kukurin.sensor.entity.Sensor;
 import java.util.List;
 import javax.validation.Valid;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,23 +31,29 @@ public class MainController {
   private final SensorRepository sensorRepository;
 
   @GetMapping("/nearest")
-  public Sensor getNearest(@RequestParam String username) {
+  public IpAddress getNearest(@RequestParam String username) {
     log.info(String.format("Location request for (%s)", username));
-    Sensor forUsername = sensorRepository.findOneByUser(username);
-    return sensorService.nearest(forUsername.getLocation());
+    Sensor forUsername = sensorRepository.findOneByUsername(username);
+    return sensorService.nearest(forUsername.getLocation()).getIpAddress();
   }
 
   @PostMapping(path="/register")
-  public void register(
+  public boolean register(
       @Valid @NotNull @RequestBody SensorRegisterRequest sensorRegisterRequest) {
     log.info(String.format("Registering sensor for user %s", sensorRegisterRequest.getUsername()));
     sensorService.register(sensorRegisterRequest);
+    return true;
   }
 
   @PostMapping(path="/store")
-  public void storeMeasurement(
+  public boolean storeMeasurement(
     @Valid @NotNull @RequestBody StoreMeasurementRequest storeMeasurementRequest) {
+    return true;
+  }
 
+  @DeleteMapping(path="/delete")
+  public void delete() {
+    this.sensorRepository.deleteAll();
   }
 
   @ExceptionHandler

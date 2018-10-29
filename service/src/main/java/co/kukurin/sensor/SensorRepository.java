@@ -9,6 +9,6 @@ import org.springframework.stereotype.Repository;
 public interface SensorRepository
     extends JpaRepository<Sensor, Integer>, QueryDslPredicateExecutor<Sensor> {
 
-  Sensor findOneByUser(String user);
+  Sensor findOneByUsername(String username);
 
 }
