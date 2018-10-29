@@ -133,7 +133,7 @@ public class Sensor {
     private Measurement getMeasurement(Socket socket) throws IOException {
       PrintWriter outToServer = new PrintWriter(new OutputStreamWriter(
           socket.getOutputStream()), true);
-      outToServer.flush();
+      outToServer.println("ping");
 
       BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
           socket.getInputStream()));

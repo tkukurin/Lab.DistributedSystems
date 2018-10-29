@@ -57,7 +57,7 @@ public class Main {
       Sensor s1 = new Sensor("u1", 8081, service, httpClients, measurements);
       serverService.execute(s1.getServer());
       nameToSensor.put("u1", s1);
-      Sensor s2 = new Sensor("u1", 8082, service, httpClients, measurements);
+      Sensor s2 = new Sensor("u2", 8082, service, httpClients, measurements);
       nameToSensor.put("u2", s2);
       serverService.execute(s2.getServer());
 
@@ -107,7 +107,9 @@ public class Main {
             break;
           }
           case "clear": {
-            nameToSensor.keySet().forEach(nameToSensor::remove);
+            nameToSensor.values().forEach(Sensor::shutdown);
+            nameToSensor.clear();
+
             service.delete().execute();
             out.println("Cleared all");
             break;

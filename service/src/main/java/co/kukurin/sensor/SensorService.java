@@ -36,6 +36,7 @@ public class SensorService {
     sensor.addMeasurement(
         storeMeasurementRequest.getParameter(),
         storeMeasurementRequest.getAverageValue());
+    this.sensorRepository.saveAndFlush(sensor);
     return true;
   }
 }
