@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import org.apache.log4j.Logger;
 
 class Measurements {
@@ -35,12 +35,8 @@ class Measurements {
       // skip header: "Temperature,Pressure,Humidity,CO,NO2,SO2,"
       reader.readLine();
 
-      while (true) {
-        String line = reader.readLine();
-        if (line == null) {
-          break;
-        }
-
+      String line;
+      while ((line = reader.readLine()) != null) {
         result.measurements.add(Measurement.parse(line));
       }
     } catch (IOException e) {
@@ -50,15 +46,15 @@ class Measurements {
     return result;
   }
 
+  @Data
   @AllArgsConstructor
-  @Getter
   static class Measurement {
-    String temperature;
-    String pressure;
-    String humidity;
-    String co;
-    String no2;
-    String so2;
+    private String temperature;
+    private String pressure;
+    private String humidity;
+    private String co;
+    private String no2;
+    private String so2;
 
     @Override
     public String toString() {
@@ -68,12 +64,12 @@ class Measurements {
     public static Measurement parse(String line) {
       List<String> components = Arrays.stream(line.trim().split(",")).collect(Collectors.toList());
       return new Measurement(
-          guard(components, 0),
-          guard(components, 1),
-          guard(components, 2),
-          guard(components, 3),
-          guard(components, 4),
-          guard(components, 5));
+          atIndexOrEmpty(components, 0),
+          atIndexOrEmpty(components, 1),
+          atIndexOrEmpty(components, 2),
+          atIndexOrEmpty(components, 3),
+          atIndexOrEmpty(components, 4),
+          atIndexOrEmpty(components, 5));
     }
 
     public static Measurement average(Measurement m1, Measurement m2) {
@@ -110,7 +106,7 @@ class Measurements {
     }
   }
 
-  private static String guard(List<String> components, int i) {
+  private static String atIndexOrEmpty(List<String> components, int i) {
     if (components.size() <= i) {
       return "";
     }

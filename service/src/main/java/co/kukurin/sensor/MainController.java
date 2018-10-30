@@ -34,6 +34,9 @@ public class MainController {
   public IpAddress getNearest(@RequestParam String username) {
     log.info(String.format("Location request for (%s)", username));
     Sensor forUsername = sensorRepository.findOneByUsername(username);
+    if (forUsername == null) {
+      throw new RuntimeException(String.format("Sensor not found for username %s", username));
+    }
     return sensorService.nearest(forUsername.getLocation()).getIpAddress();
   }
 

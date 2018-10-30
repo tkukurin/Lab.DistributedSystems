@@ -19,6 +19,8 @@ import org.apache.log4j.Logger;
 
 public class Sensor {
 
+  private static final int SERVER_TIMEOUT_MS = 100_000;
+
   private final long startTime;
   private final Logger log;
   private final Measurements measurements;
@@ -59,24 +61,24 @@ public class Sensor {
     public Server(int port, ExecutorService executorService) throws IOException {
       this.executorService = executorService;
       this.serverSocket = new ServerSocket(port);
-      this.serverSocket.setSoTimeout(100000);
+      this.serverSocket.setSoTimeout(SERVER_TIMEOUT_MS);
       this.running = new AtomicBoolean(false);
     }
 
     @Override
     public void run() {
       log.debug("Starting server");
+      Supplier<Measurement> measurementSupplier =
+          () -> measurements.getReading(Utils.currentTimeSeconds() - startTime);
 
       this.running.set(true);
       while (this.running.get()) {
         try  {
           Socket client = this.serverSocket.accept();
-          log.debug("Accepted request");
-
-          Supplier<Measurement> measurementSupplier =
-              () -> measurements.getReading(Utils.currentTimeSeconds() - startTime);
           this.executorService.execute(new Worker(
-            measurementSupplier, client.getOutputStream(), client.getInputStream()));
+              measurementSupplier,
+              client.getOutputStream(),
+              client.getInputStream()));
         } catch (IOException e) {
           log.error("Server exception", e);
         }
@@ -133,7 +135,7 @@ public class Sensor {
     private Measurement getMeasurement(Socket socket) throws IOException {
       PrintWriter outToServer = new PrintWriter(new OutputStreamWriter(
           socket.getOutputStream()), true);
-      outToServer.println("ping");
+      outToServer.println("GIMMIE");
 
       BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
           socket.getInputStream()));

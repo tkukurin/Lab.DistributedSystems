@@ -16,6 +16,10 @@ public class SensorService {
 
   public Sensor register(SensorRegisterRequest sensorRegisterRequest) {
     String username = sensorRegisterRequest.getUsername();
+    if (sensorRepository.findOneByUsername(username) != null) {
+      throw new RuntimeException(String.format("Sensor already exists for username %s", username));
+    }
+
     Location location = new Location(
         sensorRegisterRequest.getLatitude(), sensorRegisterRequest.getLongitude());
     IpAddress ipAddress = new IpAddress(
@@ -28,7 +32,7 @@ public class SensorService {
     Optional<Sensor> closest = this.sensorRepository.findAll().stream()
         .filter(si -> !si.getLocation().equals(location))
         .min(Comparator.comparingDouble(si -> si.getLocation().distance(location)));
-    return closest.orElse(null);
+    return closest.orElseThrow(() -> new RuntimeException("No nearest sensor found."));
   }
 
   public boolean store(StoreMeasurementRequest storeMeasurementRequest) {
