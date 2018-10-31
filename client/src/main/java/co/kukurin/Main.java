@@ -105,7 +105,7 @@ public class Main {
       Location location = new Location(
           Utils.random(random, LAT_LO, LAT_HI),
           Utils.random(random, LON_LO, LON_HI));
-      Sensor sensor = new Sensor(name, port++, service, httpClients, measurements);
+      Sensor sensor = new Sensor(name, port, service, httpClients, measurements);
       SensorRegisterRequest request = new SensorRegisterRequest(
           name, location.getLat(), location.getLon(), sensor.getIp(), sensor.getPort());
       Boolean registered = service.register(request).execute().body();

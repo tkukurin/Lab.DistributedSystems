@@ -2,8 +2,8 @@ package co.kukurin;
 
 import co.kukurin.data.IpAddress;
 import co.kukurin.data.Location;
-import co.kukurin.sensor.entity.Sensor;
 import co.kukurin.sensor.SensorRepository;
+import co.kukurin.sensor.entity.Sensor;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

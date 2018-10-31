@@ -32,7 +32,7 @@ public class MainController {
 
   @GetMapping("/nearest")
   public IpAddress getNearest(@RequestParam String username) {
-    log.info(String.format("Location request for (%s)", username));
+    log.info(String.format("Location request for %s", username));
     Sensor forUsername = sensorRepository.findOneByUsername(username);
     if (forUsername == null) {
       throw new RuntimeException(String.format("Sensor not found for username %s", username));
@@ -43,17 +43,15 @@ public class MainController {
   @PostMapping(path="/register")
   public boolean register(
       @Valid @NotNull @RequestBody SensorRegisterRequest sensorRegisterRequest) {
-    log.info(String.format("Registering sensor for user %s", sensorRegisterRequest.getUsername()));
-    sensorService.register(sensorRegisterRequest);
-    return true;
+    log.info(String.format("Registering sensor %s", sensorRegisterRequest));
+    return sensorService.register(sensorRegisterRequest) != null;
   }
 
   @PostMapping(path="/store")
   public boolean storeMeasurement(
     @Valid @NotNull @RequestBody StoreMeasurementRequest storeMeasurementRequest) {
     log.info(String.format("Storing measurement %s", storeMeasurementRequest));
-    sensorService.store(storeMeasurementRequest);
-    return true;
+    return sensorService.store(storeMeasurementRequest) != null;
   }
 
   @DeleteMapping(path="/delete")

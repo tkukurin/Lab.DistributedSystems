@@ -35,12 +35,11 @@ public class SensorService {
     return closest.orElseThrow(() -> new RuntimeException("No nearest sensor found."));
   }
 
-  public boolean store(StoreMeasurementRequest storeMeasurementRequest) {
+  public Sensor store(StoreMeasurementRequest storeMeasurementRequest) {
     Sensor sensor = this.sensorRepository.findOneByUsername(storeMeasurementRequest.getUsername());
     sensor.addMeasurement(
         storeMeasurementRequest.getParameter(),
         storeMeasurementRequest.getAverageValue());
-    this.sensorRepository.saveAndFlush(sensor);
-    return true;
+    return this.sensorRepository.saveAndFlush(sensor);
   }
 }
