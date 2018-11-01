@@ -8,6 +8,7 @@ import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 interface SensorService {
@@ -20,7 +21,7 @@ interface SensorService {
   @POST("/store")
   Call<Boolean> store(@Body StoreMeasurementRequest request);
 
-  @DELETE("/delete")
-  Call<Void> delete();
+  @DELETE("/{username}")
+  Call<Void> delete(@Path("username") String username);
 }
 

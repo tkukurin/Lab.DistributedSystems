@@ -14,12 +14,13 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.Getter;
-import org.apache.log4j.Logger;
 
 public class Sensor {
 
-  private static final int SERVER_TIMEOUT_MS = 100_000;
+  private static final int TIMEOUT_MS = 100_000;
 
   private final long startTime;
   private final Logger log;
@@ -61,13 +62,12 @@ public class Sensor {
     public Server(int port, ExecutorService executorService) throws IOException {
       this.executorService = executorService;
       this.serverSocket = new ServerSocket(port);
-      this.serverSocket.setSoTimeout(SERVER_TIMEOUT_MS);
+      this.serverSocket.setSoTimeout(TIMEOUT_MS);
       this.running = new AtomicBoolean(false);
     }
 
     @Override
     public void run() {
-      log.debug("Starting server");
       Supplier<Measurement> measurementSupplier =
           () -> measurements.getReading(Utils.currentTimeSeconds() - startTime);
 
@@ -80,7 +80,7 @@ public class Sensor {
               client.getOutputStream(),
               client.getInputStream()));
         } catch (IOException e) {
-          log.error("Server exception", e);
+          log.log(Level.WARNING, "Server exception", e);
         }
       }
     }
@@ -118,7 +118,7 @@ public class Sensor {
                         new StoreMeasurementRequest(this.name, m.getKey(), m.getValue());
                     this.sensorService.store(request).execute();
                   } catch (IOException e) {
-                    log.error("Error sending measurement", e);
+                    log.log(Level.WARNING, "Error sending measurement", e);
                   }
                 });
 
@@ -140,7 +140,7 @@ public class Sensor {
       BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
           socket.getInputStream()));
       String received = inFromServer.readLine();
-      log.debug(String.format("Received %s from server", received));
+      log.log(Level.INFO, String.format("Received %s from server", received));
 
       return Measurement.parse(received);
     }

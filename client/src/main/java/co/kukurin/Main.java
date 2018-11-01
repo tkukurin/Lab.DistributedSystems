@@ -6,13 +6,21 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -26,19 +34,23 @@ public class Main {
   private static final double LAT_HI = 45.85;
 
   public static void main(String[] args) throws IOException {
-    new Program().run();
+    LogManager.getLogManager().reset();
+    Handler handler = new FileHandler("test.log");
+    handler.setFormatter(new SimpleFormatter());
+    Logger.getLogger("").addHandler(handler);
+    new Thread(new Program()).start();
   }
 
-  static class Program {
+  static class Program implements Runnable {
+    ExecutorService executorService = Executors.newCachedThreadPool();
 
-    ExecutorService clientService = Executors.newCachedThreadPool();
-    ExecutorService serverService = Executors.newCachedThreadPool();
-    ExecutorService httpClients = Executors.newCachedThreadPool();
+    ExecutorService clientService = executorService;
+    ExecutorService serverService = executorService;
+    ExecutorService httpClients = executorService;
 
+    PrintStream out = System.out;
     Random random = new Random();
     Measurements measurements = Measurements.fromFile("readings.csv");
-    PrintStream out = System.out;
-    BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
     OkHttpClient okHttpClient = new OkHttpClient.Builder()
         .readTimeout(60, TimeUnit.SECONDS)
         .connectTimeout(60, TimeUnit.SECONDS)
@@ -62,37 +74,41 @@ public class Main {
       serverService.execute(s2.getServer());
     }
 
-    void run() throws IOException {
+    @Override
+    public void run() {
       int port = 8181;
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {
+        while (true) {
+          out.print("$ ");
+          String[] components = in.readLine().trim().split("\\s+");
 
-      while (true) {
-        out.print("$ ");
-        String[] components = in.readLine().trim().split("\\s+");
+          if (components.length == 0) {
+            out.println("Please enter command");
+            continue;
+          }
 
-        if (components.length == 0) {
-          out.println("Please enter command");
-          continue;
+          String command = components[0];
+          switch (command) {
+            case "create":
+              create(port++, components[1]);
+              break;
+            case "destroy":
+              destroy(components[1]);
+              break;
+            case "clear":
+              clearAll();
+              break;
+            case "measure":
+              measure(components[1]);
+              break;
+            case "exit":
+              System.exit(0);
+            default:
+              out.println("Unrecognized command");
+          }
         }
-
-        String command = components[0];
-        switch (command) {
-          case "create":
-            create(port++, components[1]);
-            break;
-          case "destroy":
-            destroy(components[1]);
-            break;
-          case "clear":
-            clearAll();
-            break;
-          case "measure":
-            measure(components[1]);
-            break;
-          case "exit":
-            System.exit(0);
-          default:
-            out.println("Unrecognized command");
-        }
+      } catch (IOException e) {
+        e.printStackTrace();
       }
     }
 
@@ -122,8 +138,13 @@ public class Main {
     private void destroy(String component) {
       Optional.ofNullable(nameToSensor.get(component))
           .ifPresent(sensor -> {
-            sensor.shutdown();
-            nameToSensor.remove(component);
+            try {
+              service.delete(component).execute();
+              nameToSensor.remove(component);
+              sensor.shutdown();
+            } catch (IOException e) {
+              out.println("Error removing component");
+            }
           });
     }
 
@@ -133,11 +154,8 @@ public class Main {
           .ifPresent(clientService::execute);
     }
 
-    private void clearAll() throws IOException {
-      nameToSensor.values().forEach(Sensor::shutdown);
-      nameToSensor.clear();
-
-      service.delete().execute();
+    private void clearAll() {
+      new ArrayList<>(nameToSensor.keySet()).forEach(this::destroy);
       out.println("Cleared all");
     }
   }
