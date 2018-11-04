@@ -28,17 +28,14 @@ public class Sensor {
 
   @Getter private final Client client;
   @Getter private final Server server;
-  @Getter private final int port;
 
   Sensor(String name,
-      int port,
       SensorService sensorService,
       ExecutorService executorService,
       Measurements measurements) throws IOException {
     this.client = new Client(name, sensorService);
-    this.server = new Server(port, executorService);
+    this.server = new Server(0, executorService);
 
-    this.port = port;
     this.measurements = measurements;
     this.startTime = Utils.currentTimeSeconds();
     this.log = Logger.getLogger(name);
@@ -52,6 +49,8 @@ public class Sensor {
   String getIp() {
     return this.server.serverSocket.getInetAddress().getHostAddress();
   }
+
+  int getPort() { return this.server.serverSocket.getLocalPort(); }
 
   class Server implements Runnable {
 
@@ -80,7 +79,7 @@ public class Sensor {
               client.getOutputStream(),
               client.getInputStream()));
         } catch (IOException e) {
-          log.log(Level.WARNING, "Server exception", e);
+          log.throwing("Server exception", e.getMessage(), e);
         }
       }
     }
@@ -103,6 +102,12 @@ public class Sensor {
       this.measuring.set(true);
       try {
         IpAddress neighborIp = this.sensorService.nearest(this.name).execute().body();
+
+        if (neighborIp == null) {
+          log.log(Level.WARNING, "No neighbor returned from server.");
+          return;
+        }
+
         try (Socket socket = new Socket(neighborIp.getIp(), neighborIp.getPort())) {
           while (this.measuring.get()) {
             Measurement myMeasurement = measurements.getReading(

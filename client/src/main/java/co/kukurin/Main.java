@@ -7,20 +7,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
+import java.util.logging.SocketHandler;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -35,8 +34,16 @@ public class Main {
 
   public static void main(String[] args) throws IOException {
     LogManager.getLogManager().reset();
-    Handler handler = new FileHandler("test.log");
-    handler.setFormatter(new SimpleFormatter());
+    Handler handler = new SocketHandler("localhost", 8000);
+    handler.setFormatter(new Formatter() {
+      @Override
+      public String format(LogRecord logRecord) {
+        return String.format(
+            "[%s] %s",
+            logRecord.getLoggerName(),
+            logRecord.getMessage());
+      }
+    });
     Logger.getLogger("").addHandler(handler);
     new Thread(new Program()).start();
   }
@@ -65,18 +72,8 @@ public class Main {
 
     Map<String, Sensor> nameToSensor = new HashMap<>();
 
-    Program() throws IOException {
-      Sensor s1 = new Sensor("u1", 8081, service, httpClients, measurements);
-      serverService.execute(s1.getServer());
-      nameToSensor.put("u1", s1);
-      Sensor s2 = new Sensor("u2", 8082, service, httpClients, measurements);
-      nameToSensor.put("u2", s2);
-      serverService.execute(s2.getServer());
-    }
-
     @Override
     public void run() {
-      int port = 8181;
       try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {
         while (true) {
           out.print("$ ");
@@ -90,7 +87,7 @@ public class Main {
           String command = components[0];
           switch (command) {
             case "create":
-              create(port++, components[1]);
+              create(components[1]);
               break;
             case "destroy":
               destroy(components[1]);
@@ -102,6 +99,7 @@ public class Main {
               measure(components[1]);
               break;
             case "exit":
+              clearAll();
               System.exit(0);
             default:
               out.println("Unrecognized command");
@@ -112,7 +110,7 @@ public class Main {
       }
     }
 
-    private void create(int port, String name) throws IOException {
+    private void create(String name) throws IOException {
       if (nameToSensor.containsKey(name)) {
         out.println("Sensor with given name already exists.");
         return;
@@ -121,7 +119,7 @@ public class Main {
       Location location = new Location(
           Utils.random(random, LAT_LO, LAT_HI),
           Utils.random(random, LON_LO, LON_HI));
-      Sensor sensor = new Sensor(name, port, service, httpClients, measurements);
+      Sensor sensor = new Sensor(name, service, httpClients, measurements);
       SensorRegisterRequest request = new SensorRegisterRequest(
           name, location.getLat(), location.getLon(), sensor.getIp(), sensor.getPort());
       Boolean registered = service.register(request).execute().body();
@@ -133,6 +131,7 @@ public class Main {
 
       nameToSensor.put(name, sensor);
       serverService.execute(sensor.getServer());
+      out.println(String.format("Created sensor on port %d.", sensor.getPort()));
     }
 
     private void destroy(String component) {
@@ -142,6 +141,7 @@ public class Main {
               service.delete(component).execute();
               nameToSensor.remove(component);
               sensor.shutdown();
+              out.println(String.format("Destroyed component %s.", component));
             } catch (IOException e) {
               out.println("Error removing component");
             }
@@ -151,7 +151,10 @@ public class Main {
     private void measure(String name) {
       Optional.ofNullable(nameToSensor.get(name))
           .map(Sensor::getClient)
-          .ifPresent(clientService::execute);
+          .ifPresent(runnable -> {
+            clientService.execute(runnable);
+            out.println(String.format("Measuring %s", name));
+          });
     }
 
     private void clearAll() {
