@@ -2,7 +2,7 @@
  * This code has been developed at Departement of Telecommunications,
  * Faculty of Electrical Eengineering and Computing, University of Zagreb.
  */
-package hr.fer.tel.rassus.stupidudp.network;
+package co.kukurin.support;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -44,7 +44,7 @@ public class SimpleSimulatedDatagramSocket extends DatagramSocket {
     @Override
     public void send(DatagramPacket packet) throws IOException {
         if (random.nextDouble() >= lossRate) {
-            //delay is uniformely distributed between 0 and 2*averageDelay
+            //delay is uniformly distributed between 0 and 2*averageDelay
             new Thread(new OutgoingDatagramPacket(packet, (long) (2 * averageDelay * random.nextDouble()))).start();
         }
     }
