@@ -1,5 +1,6 @@
 package co.kukurin.sensor.udp;
 
+import co.kukurin.support.EmulatedSystemClock;
 import java.util.stream.IntStream;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -8,17 +9,18 @@ import lombok.ToString;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
 @ToString
 public class Time {
-  private long[] vectorTime;
-  private long scalarTime;
+  @Getter private long[] vectorTime;
+  @Getter private long scalarTime;
+
+  private EmulatedSystemClock emulatedSystemClock;
 
   public Time onSend(int myIndex) {
     long[] vectorTime = this.vectorTime.clone();
     vectorTime[myIndex]++;
-    long scalarTime = this.scalarTime + 1;
-    return new Time(vectorTime, scalarTime);
+    long scalarTime = emulatedSystemClock.currentTimeMillis();
+    return new Time(vectorTime, scalarTime, emulatedSystemClock);
   }
 
   public Time onReceive(Time other) {
@@ -26,7 +28,7 @@ public class Time {
     long[] vectorTime = IntStream.range(0, this.vectorTime.length)
         .mapToLong(i -> Math.max(this.vectorTime[i], other.vectorTime[i]))
         .toArray();
-    return new Time(vectorTime, scalarTime);
+    return new Time(vectorTime, scalarTime, emulatedSystemClock);
   }
 
   public int compareScalarTime(Time other) {

@@ -50,14 +50,17 @@ public class Sensor {
 
   public Sensor(Config config, Measurements measurements) {
     this.myId = config.getPort() - 9191; // TODO non-fixed port
-    this.time = new Time(new long[config.getPorts().length], 0);
+    this.emulatedSystemClock =  new EmulatedSystemClock();
+    this.time = new Time(
+        new long[config.getPorts().length],
+        emulatedSystemClock.currentTimeMillis(),
+        emulatedSystemClock);
     this.config = config;
     this.measurements = measurements;
     this.otherNodePorts = Arrays.stream(config.getPorts())
         .filter(p -> p != config.getPort())
         .boxed()
         .collect(Collectors.toList());
-    this.emulatedSystemClock =  new EmulatedSystemClock();
     this.objectMapper = new ObjectMapper();
   }
 
@@ -134,18 +137,17 @@ public class Sensor {
             double averaged = measurementPackets.stream().collect(
                 Collectors.averagingDouble(p -> p.getMeasurement().getCo()));
             System.out.println("Values:");
-            output(byScalar);
-            output(byVector);
+            System.out.println(output(byScalar));
+            System.out.println(output(byVector));
             System.out.println(averaged);
           }
         }
       }
     }
 
-    private void output(List<MeasurementPacket> list) {
-      System.out
-          .println(list.stream().map(i -> "" + i).collect(
-              Collectors.joining(",\n", "[", "]")));
+    private String output(List<MeasurementPacket> list) {
+      return list.stream().map(i -> "" + i).collect(
+          Collectors.joining(",\n", "[", "]"));
     }
   }
 
