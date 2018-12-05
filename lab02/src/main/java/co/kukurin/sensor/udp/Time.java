@@ -9,7 +9,7 @@ import lombok.ToString;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
+@ToString(exclude = "emulatedSystemClock")
 public class Time {
   @Getter private long[] vectorTime;
   @Getter private long scalarTime;
