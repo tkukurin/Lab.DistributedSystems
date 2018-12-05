@@ -1,14 +1,15 @@
-package co.kukurin.sensor;
+package co.kukurin.sensor.udp;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import java.sql.Time;
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -17,18 +18,25 @@ import lombok.Setter;
     use = JsonTypeInfo.Id.NAME,
     property = "type")
 @JsonSubTypes({
-    @Type(value = ConfirmationPacket.class, name = "confirmationPacket"),
-    @Type(value = MeasurementPacket.class, name = "measurementPacket")
+    @Type(value = ConfirmationPacket.class, name = "confirmation"),
+    @Type(value = MeasurementPacket.class, name = "measurement")
 })
 @EqualsAndHashCode
+@ToString
 public class Packet {
+
+  private Time time;
 
   private Integer id;
 
   @Setter
-  private Time receivedTime;
+  private Date receivedTime;
 
-  public Packet(Integer id) {
+  @Setter
+  private int port;
+
+  public Packet(Time time, Integer id) {
+    this.time = time;
     this.id = id;
   }
 }

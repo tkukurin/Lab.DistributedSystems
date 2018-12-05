@@ -1,6 +1,5 @@
-package co.kukurin.sensor;
+package co.kukurin.common;
 
-import co.kukurin.common.Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;

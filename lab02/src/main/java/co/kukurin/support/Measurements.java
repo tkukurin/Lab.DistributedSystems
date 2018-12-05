@@ -7,8 +7,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,16 +14,11 @@ import lombok.ToString;
 
 public class Measurements {
 
-  private static final Logger log = Logger.getLogger(Measurements.class.toString());
-
   private final List<Measurement> measurements = new ArrayList<>();
 
   public Measurement getReading(long secs) {
     // formula from the document, adjusted to 0-index and skip header.
-    Measurement measurement = this.measurements.get((int) (secs % this.measurements.size()));
-    log.log(Level.INFO, String.format(
-        "Retrieving measurement at second %d: %s", secs, measurement.toString()));
-    return measurement;
+    return this.measurements.get((int) (secs % this.measurements.size()));
   }
 
   public static Measurements fromFile(String name) {
