@@ -11,16 +11,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @Type(value = ConfirmationPacket.class, name = "confirmation"),
     @Type(value = MeasurementPacket.class, name = "measurement")
 })
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
 @EqualsAndHashCode
 @ToString
 public class Packet {

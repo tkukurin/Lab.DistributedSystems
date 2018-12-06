@@ -48,8 +48,8 @@ public class Time {
       count[current + 1]++;
     }
 
-    return count[plus] > 0 && count[minus] == 0 ? -1
-        : count[minus] > 0 && count[plus] == 0 ? 1
+    return count[plus] > 0 && count[minus] == 0 ? 1
+        : count[minus] > 0 && count[plus] == 0 ? -1
         : 0;
   }
 }

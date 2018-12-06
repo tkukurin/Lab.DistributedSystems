@@ -1,5 +1,5 @@
 {
     "ports": [9191, 9192, 9193, 9194],
-    "averageDelayMilliseconds": 1,
-    "lossRate": 0.0
+    "averageDelayMilliseconds": 1000,
+    "lossRate": 0.5
 }

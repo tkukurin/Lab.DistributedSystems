@@ -15,9 +15,7 @@ public class Demo {
         .findFirst()
         .orElseThrow(() -> new RuntimeException("All designated ports in use")));
 
-    Sensor sensor = new Sensor(
-        config,
-        Measurements.fromFile("readings.csv"));
+    Sensor sensor = new Sensor(config, Measurements.fromFile("readings.csv"));
     sensor.start();
   }
 }

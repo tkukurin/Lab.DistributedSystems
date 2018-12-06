@@ -49,7 +49,7 @@ public class Sensor {
   private Time time;
 
   public Sensor(Config config, Measurements measurements) {
-    this.myId = config.getPort() - 9191; // TODO non-fixed port
+    this.myId = config.getPort() - 9191;
     this.emulatedSystemClock =  new EmulatedSystemClock();
     this.time = new Time(
         new long[config.getPorts().length],
@@ -85,7 +85,7 @@ public class Sensor {
             Run.builder()
                 .runnable(() -> simulatedDatagramSocket.send(packet))
                 .handler(e -> log.warning(String.format(
-                    "Failed resending datagram %s to port %s",
+                    "Exception resending datagram %s to port %s",
                     lastPacketId, packet.getPort())))
                 .build()
                 .run());
@@ -159,6 +159,8 @@ public class Sensor {
             new SimpleSimulatedDatagramSocket(
                 config.getPort(), config.getLossRate(), config.getAverageDelayMilliseconds())) {
         socket.setSoTimeout(50000);
+
+        //noinspection InfiniteLoopStatement
         while (true) {
           byte[] data = new byte[MAX_BUFFER_LENGTH];
           DatagramPacket datagram = new DatagramPacket(data, data.length);
@@ -169,26 +171,26 @@ public class Sensor {
           log.info(new String(datagram.getData(), 0, datagram.getLength()));
           synchronized (this) {
             time = time.onReceive(receivedPacket.getTime());
+          }
 
-            if (receivedPacket instanceof ConfirmationPacket) {
-              idToPacket.remove(receivedPacket.getId());
-            } else {
-              MeasurementPacket measurement = (MeasurementPacket) receivedPacket;
-              synchronized (measurementPackets) {
-                measurementPackets.offer(measurement);
-              }
-              byte[] confirmation = objectMapper.writeValueAsBytes(
-                  ConfirmationPacket.fromPacket(receivedPacket));
-              socket.send(new DatagramPacket(
-                  confirmation, confirmation.length, datagram.getAddress(), measurement.getPort()));
+          if (receivedPacket instanceof ConfirmationPacket) {
+            idToPacket.remove(receivedPacket.getId());
+          } else {
+            MeasurementPacket measurement = (MeasurementPacket) receivedPacket;
+            synchronized (measurementPackets) {
+              measurementPackets.offer(measurement);
             }
+            byte[] confirmation = objectMapper.writeValueAsBytes(
+                ConfirmationPacket.fromPacket(receivedPacket));
+            socket.send(new DatagramPacket(
+                confirmation, confirmation.length, datagram.getAddress(), measurement.getPort()));
           }
         }
       }
     }
   }
 
-  // this is just so we don't have to keep too many of them in memory.
+  // just so we don't have to keep too many of them in memory.
   private <T extends Packet> T withTime(T readValue) {
     readValue.setReceivedTime(Date.from(Instant.now()));
     return readValue;
