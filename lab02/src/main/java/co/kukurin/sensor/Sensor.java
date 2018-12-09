@@ -23,8 +23,10 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -44,8 +46,7 @@ public class Sensor {
   private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<Integer, DatagramPacket> idToPacket =
       new ConcurrentHashMap<>();
-  // we don't want to double-count packets
-  // easiest way to do so is keeping some sort of set inmemory
+  private final Set<MeasurementPacket> acks = Collections.synchronizedSet(new HashSet<>());
   private final NavigableMap<Date, MeasurementPacket> measurementPackets =
       Collections.synchronizedNavigableMap(new TreeMap<>());
 
@@ -97,31 +98,30 @@ public class Sensor {
           for (int i = 0; i < 5; i++) {
             long secs = (emulatedSystemClock.currentTimeMillis() - startTime) / 1000;
             Measurement measurement = measurements.getReading(secs);
-
             synchronized (this) {
               time = time.onSend(myId);
-            }
+              // list is concurrent so we can get by without synchronizing here.
+              // let's add our own measurement before others.
+              measurementPackets.put(Date.from(Instant.now()), new MeasurementPacket(
+                  time, lastPacketId++, config.getPort(), measurement));
 
-            // list is concurrent so we can get by without synchronizing here.
-            // let's add our own measurement before others.
-            measurementPackets.put(Date.from(Instant.now()), new MeasurementPacket(
-                time, lastPacketId++, config.getPort(), measurement));
+              for (Integer port : otherNodePorts) {
+                time = time.onSend(myId);
+                MeasurementPacket packet = new MeasurementPacket(
+                    time, lastPacketId, config.getPort(), measurement);
+                byte[] data = objectMapper.writeValueAsString(packet).getBytes();
 
-            for (Integer port : otherNodePorts) {
-              MeasurementPacket packet = new MeasurementPacket(
-                  time, lastPacketId, config.getPort(), measurement);
-              byte[] data = objectMapper.writeValueAsString(packet).getBytes();
-
-              SocketAddress address = new InetSocketAddress(InetAddress.getLocalHost(), port);
-              DatagramPacket datagramPacket = new DatagramPacket(data, 0, data.length, address);
-              try {
-                simulatedDatagramSocket.send(datagramPacket);
-                idToPacket.put(lastPacketId, datagramPacket);
-                lastPacketId++;
-              } catch (IOException e) {
-                log.warning(String.format(
-                    "Failed sending datagram %s to port %s",
-                    lastPacketId, port));
+                SocketAddress address = new InetSocketAddress(InetAddress.getLocalHost(), port);
+                DatagramPacket datagramPacket = new DatagramPacket(data, 0, data.length, address);
+                try {
+                  simulatedDatagramSocket.send(datagramPacket);
+                  idToPacket.put(lastPacketId, datagramPacket);
+                  lastPacketId++;
+                } catch (IOException e) {
+                  log.warning(String.format(
+                      "Failed sending datagram %s to port %s",
+                      lastPacketId, port));
+                }
               }
             }
 
@@ -151,6 +151,14 @@ public class Sensor {
       }
     }
 
+    // just so we don't have to keep too many of them in memory.
+    private void clearOldPackets(int nSeconds) {
+      Date nSecondsEarlier = Date.from(Instant.now().minusSeconds(nSeconds));
+      while (!measurementPackets.isEmpty() && measurementPackets.firstKey().before(nSecondsEarlier)) {
+        acks.remove(measurementPackets.pollFirstEntry().getValue());
+      }
+    }
+
     private String listFormat(List<MeasurementPacket> list) {
       return list.stream().map(i -> "" + i).collect(
           Collectors.joining(",\n", "[", "]"));
@@ -175,15 +183,18 @@ public class Sensor {
 
           log.info(new String(datagram.getData(), 0, datagram.getLength()));
           synchronized (this) {
-            time = time.onReceive(receivedPacket.getTime());
+            time = time.onReceive(myId, receivedPacket.getTime());
           }
 
           if (receivedPacket instanceof ConfirmationPacket) {
             idToPacket.remove(receivedPacket.getId());
           } else {
             MeasurementPacket measurement = (MeasurementPacket) receivedPacket;
-            synchronized (measurementPackets) {
-              measurementPackets.put(Date.from(Instant.now()), measurement);
+            // if measurement is already recorded, don't reinsert it but do send confirmation.
+            if (!acks.contains(measurement)) {
+              synchronized (measurementPackets) {
+                measurementPackets.put(Date.from(Instant.now()), measurement);
+              }
             }
             byte[] confirmation = objectMapper.writeValueAsBytes(
                 ConfirmationPacket.fromPacket(receivedPacket));
@@ -194,13 +205,4 @@ public class Sensor {
       }
     }
   }
-
-  // just so we don't have to keep too many of them in memory.
-  private void clearOldPackets(int nSeconds) {
-    Date nSecondsEarlier = Date.from(Instant.now().minusSeconds(nSeconds));
-    while (!measurementPackets.isEmpty() && measurementPackets.firstKey().before(nSecondsEarlier)) {
-      measurementPackets.pollFirstEntry();
-    }
-  }
-
 }

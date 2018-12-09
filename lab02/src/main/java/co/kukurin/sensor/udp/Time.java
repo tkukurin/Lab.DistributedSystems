@@ -47,15 +47,18 @@ public class Time {
   public Time onSend(int myIndex) {
     long[] vectorTime = this.vectorTime.clone();
     vectorTime[myIndex]++;
-    long scalarTime = Math.max(emulatedSystemClock.currentTimeMillis(), this.scalarTime);
+    long scalarTime = emulatedSystemClock.currentTimeMillis();
     return new Time(vectorTime, scalarTime, emulatedSystemClock);
   }
 
-  public Time onReceive(Time other) {
-    long scalarTime = Math.max(this.scalarTime, other.scalarTime + 1);
+  public Time onReceive(int myIndex, Time other) {
+    // update according to clock drift
+    // maintains consistency of events following this one.
+    long scalarTime = emulatedSystemClock.updateClock(other.scalarTime);
     long[] vectorTime = IntStream.range(0, this.vectorTime.length)
         .mapToLong(i -> Math.max(this.vectorTime[i], other.vectorTime[i]))
         .toArray();
+    vectorTime[myIndex]++;
     return new Time(vectorTime, scalarTime, emulatedSystemClock);
   }
 }
