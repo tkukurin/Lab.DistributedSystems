@@ -3,12 +3,10 @@ package co.kukurin.sensor.udp;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -27,10 +25,6 @@ public class Packet {
 
   private Integer id;
 
-  @Setter
-  private Date receivedTime;
-
-  @Setter
   private int port;
 
   public Packet(Time time, Integer id) {

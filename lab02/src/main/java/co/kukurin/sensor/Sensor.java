@@ -21,10 +21,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
@@ -42,8 +44,10 @@ public class Sensor {
   private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<Integer, DatagramPacket> idToPacket =
       new ConcurrentHashMap<>();
-  private final ConcurrentLinkedQueue<MeasurementPacket> measurementPackets =
-      new ConcurrentLinkedQueue<>();
+  // we don't want to double-count packets
+  // easiest way to do so is keeping some sort of set inmemory
+  private final NavigableMap<Date, MeasurementPacket> measurementPackets =
+      Collections.synchronizedNavigableMap(new TreeMap<>());
 
   private int lastPacketId;
   private Time time;
@@ -53,7 +57,7 @@ public class Sensor {
     this.emulatedSystemClock =  new EmulatedSystemClock();
     this.time = new Time(
         new long[config.getPorts().length],
-        emulatedSystemClock.currentTimeMillis(),
+        emulatedSystemClock.currentTimeMillis() / 1000,
         emulatedSystemClock);
     this.config = config;
     this.measurements = measurements;
@@ -100,8 +104,8 @@ public class Sensor {
 
             // list is concurrent so we can get by without synchronizing here.
             // let's add our own measurement before others.
-            measurementPackets.offer(withTime(new MeasurementPacket(
-                time, lastPacketId++, config.getPort(), measurement)));
+            measurementPackets.put(Date.from(Instant.now()), new MeasurementPacket(
+                time, lastPacketId++, config.getPort(), measurement));
 
             for (Integer port : otherNodePorts) {
               MeasurementPacket packet = new MeasurementPacket(
@@ -121,31 +125,33 @@ public class Sensor {
               }
             }
 
-            Utils.sleepBestEffort(1_000);
+            Utils.sleepBestEffort(1000);
           }
 
           // we wish to compute everything on the same set of data, so let's lock
           // measurements while we do this.
           synchronized (measurementPackets) {
-            clearOldPackets(measurementPackets, 10);
-            List<MeasurementPacket> byScalar = measurementPackets.stream()
-                .sorted((p1, p2) -> p1.getTime().compareScalarTime(p2.getTime()))
+            clearOldPackets(5);
+            List<MeasurementPacket> byScalar = measurementPackets.values().stream()
+                .sorted((p1, p2) -> Time.scalarComparator.compare(
+                    p1.getTime(), p2.getTime()))
                 .collect(Collectors.toList());
-            List<MeasurementPacket> byVector = measurementPackets.stream()
-                .sorted((p1, p2) -> p1.getTime().compareVectorTime(p2.getTime()))
+            List<MeasurementPacket> byVector = measurementPackets.values().stream()
+                .sorted((p1, p2) -> Time.vectorComparator.compare(
+                    p1.getTime(), p2.getTime()))
                 .collect(Collectors.toList());
-            double averaged = measurementPackets.stream().collect(
+            double averaged = measurementPackets.values().stream().collect(
                 Collectors.averagingDouble(p -> p.getMeasurement().getCo()));
             System.out.println("Values:");
-            System.out.println(output(byScalar));
-            System.out.println(output(byVector));
-            System.out.println(averaged);
+            System.out.format("Scalar: %s\n\n", listFormat(byScalar));
+            System.out.format("Vector: %s\n\n", listFormat(byVector));
+            System.out.format("Average co2: %.2f\n", averaged);
           }
         }
       }
     }
 
-    private String output(List<MeasurementPacket> list) {
+    private String listFormat(List<MeasurementPacket> list) {
       return list.stream().map(i -> "" + i).collect(
           Collectors.joining(",\n", "[", "]"));
     }
@@ -165,8 +171,7 @@ public class Sensor {
           byte[] data = new byte[MAX_BUFFER_LENGTH];
           DatagramPacket datagram = new DatagramPacket(data, data.length);
           socket.receive(datagram);
-          Packet receivedPacket = withTime(
-              objectMapper.readValue(datagram.getData(), Packet.class));
+          Packet receivedPacket = objectMapper.readValue(datagram.getData(), Packet.class);
 
           log.info(new String(datagram.getData(), 0, datagram.getLength()));
           synchronized (this) {
@@ -178,7 +183,7 @@ public class Sensor {
           } else {
             MeasurementPacket measurement = (MeasurementPacket) receivedPacket;
             synchronized (measurementPackets) {
-              measurementPackets.offer(measurement);
+              measurementPackets.put(Date.from(Instant.now()), measurement);
             }
             byte[] confirmation = objectMapper.writeValueAsBytes(
                 ConfirmationPacket.fromPacket(receivedPacket));
@@ -191,21 +196,11 @@ public class Sensor {
   }
 
   // just so we don't have to keep too many of them in memory.
-  private <T extends Packet> T withTime(T readValue) {
-    readValue.setReceivedTime(Date.from(Instant.now()));
-    return readValue;
-  }
-
-  private ConcurrentLinkedQueue<MeasurementPacket> clearOldPackets(
-      ConcurrentLinkedQueue<MeasurementPacket> measurementPackets, int nSeconds) {
-    Date nSecondsEarlier = Date.from(Instant
-        .now()
-        .minusSeconds(nSeconds));
-    while (!measurementPackets.isEmpty()
-        && measurementPackets.peek().getReceivedTime().before(nSecondsEarlier)) {
-      this.measurementPackets.poll();
+  private void clearOldPackets(int nSeconds) {
+    Date nSecondsEarlier = Date.from(Instant.now().minusSeconds(nSeconds));
+    while (!measurementPackets.isEmpty() && measurementPackets.firstKey().before(nSecondsEarlier)) {
+      measurementPackets.pollFirstEntry();
     }
-    return measurementPackets;
   }
 
 }

@@ -10,7 +10,6 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 public class Measurements {
 
@@ -43,13 +42,17 @@ public class Measurements {
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
-  @ToString
   public static class Measurement {
 
     private double co;
 
     public static Measurement parse(String line) {
       return new Measurement(Double.parseDouble(line.split(",")[3]));
+    }
+
+    @Override
+    public String toString() {
+      return '{' + "co2=" + co + '}';
     }
   }
 
