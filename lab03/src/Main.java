@@ -49,7 +49,7 @@ public class Main {
     System.out.printf("Lambda;%s\n",
         IntStream.range(0, n)
             .mapToObj(i -> String.format("Node %d", i + 1))
-            .collect(Collectors.joining(";")));
+            .collect(Collectors.joining(",")));
 
     final PDQ pdq = new PDQ();
     final double lambdaStep = 0.2;
@@ -64,11 +64,11 @@ public class Main {
       });
 
       pdq.Solve(Methods.CANON);
-      System.out.printf("%.3f;%s\n", lambda, IntStream.range(0, n)
+      System.out.printf("%.3f,%s\n", lambda, IntStream.range(0, n)
           .mapToObj(i -> String.format("S%d", i + 1))
           .map(name -> pdq.GetResidenceTime(name, "Requests", Job.TRANS))
           .map(dv -> String.format("%.3f", dv))
-          .collect(Collectors.joining(";")));
+          .collect(Collectors.joining(",")));
     }
   }
 }
