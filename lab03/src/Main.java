@@ -51,7 +51,6 @@ public class Main {
             .mapToObj(i -> String.format("Node %d", i + 1))
             .collect(Collectors.joining(";")));
 
-
     final PDQ pdq = new PDQ();
     final double lambdaStep = 0.2;
     final double lambdaHi = 5.0;
