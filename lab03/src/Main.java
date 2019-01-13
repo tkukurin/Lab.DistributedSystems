@@ -46,7 +46,7 @@ public class Main {
     // first-come-first-serve
     final int fcfs = QDiscipline.FCFS;
 
-    System.out.printf("Lambda;%s\n",
+    System.out.printf("Lambda,%s\n",
         IntStream.range(0, n)
             .mapToObj(i -> String.format("Node %d", i + 1))
             .collect(Collectors.joining(",")));
@@ -54,7 +54,7 @@ public class Main {
     final PDQ pdq = new PDQ();
     final double lambdaStep = 0.2;
     final double lambdaHi = 5.0;
-    for (var lambda = 0.0; lambda < lambdaHi; lambda += lambdaStep) {
+    for (var lambda = 0.0; lambda <= lambdaHi; lambda += lambdaStep) {
       pdq.Init("Homework");
       pdq.CreateOpen("Requests", lambda);
       IntStream.range(0, n).forEach(i -> {
@@ -67,7 +67,7 @@ public class Main {
       System.out.printf("%.3f,%s\n", lambda, IntStream.range(0, n)
           .mapToObj(i -> String.format("S%d", i + 1))
           .map(name -> pdq.GetResidenceTime(name, "Requests", Job.TRANS))
-          .map(dv -> String.format("%.3f", dv))
+          .map(dv -> String.format("%.7f", dv))
           .collect(Collectors.joining(",")));
     }
   }
